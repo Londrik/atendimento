@@ -1,10 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
+import models
+from database import engine, get_db
 
-app = FastAPI()
+# Garante a criação das tabelas no banco de dados recém-criado
+models.Base.metadata.create_all(bind=engine)
 
-# Configuração de CORS para permitir acesso de diferentes origens (Totem, Atendente, TV)
+app = FastAPI(title="Sistema de Filas SENAI")
+
+# CORS para permitir acesso do Totem, Atendente e TV
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,79 +19,74 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- ESTADO DO SERVIDOR (Em Memória) ---
-
-counters = {
-    "CONVENCIONAL": 0, 
-    "PRIORITARIO": 0, 
-    "MATRICULA": 0, 
-    "INFORMACAO": 0
-}
-
-prefixes = {
-    "CONVENCIONAL": "C", 
-    "PRIORITARIO": "P", 
-    "MATRICULA": "M", 
+# Mapeamento de prefixos
+PREFIXOS = {
+    "CONVENCIONAL": "C",
+    "PRIORITARIO": "P",
+    "MATRICULA": "M",
     "INFORMACAO": "I"
 }
 
-fila_espera = []
-
-# NOVA VARIÁVEL: Armazena o estado do que deve aparecer na TV
-ultima_senha_chamada = {
-    "codigo": "---",
-    "nome": "Aguardando",
-    "tipo": "Nenhum"
-}
-
-# --- MODELOS DE DADOS ---
-
-class SenhaRequest(BaseModel):
+class SenhaSchema(BaseModel):
     nome: str
     tipo: str
 
-# --- ROTAS ---
-
 @app.post("/gerar-senha")
-async def gerar_senha(request: SenhaRequest):
-    tipo = request.tipo.upper()
-    counters[tipo] += 1
-    
-    codigo = f"{prefixes.get(tipo, 'S')}-{str(counters[tipo]).zfill(3)}"
-    
-    nova_senha = {
-        "codigo": codigo,
-        "nome": request.nome,
-        "tipo": tipo
-    }
-    
-    fila_espera.append(nova_senha)
-    return nova_senha
+def gerar_senha(request: SenhaSchema, db: Session = Depends(get_db)):
+    tipo_formatado = request.tipo.upper()
+    prefixo = PREFIXOS.get(tipo_formatado, "S")
+
+    # Conta quantas senhas deste tipo já existem para gerar o sequencial
+    contagem = db.query(models.Atendimento).filter(models.Atendimento.tipo == tipo_formatado).count()
+    sequencial = str(contagem + 1).zfill(3)
+    novo_codigo = f"{prefixo}-{sequencial}"
+
+    novo_registro = models.Atendimento(
+        codigo=novo_codigo,
+        nome=request.nome.upper(),
+        tipo=tipo_formatado,
+        status="espera"
+    )
+
+    db.add(novo_registro)
+    db.commit()
+    db.refresh(novo_registro)
+    return novo_registro
 
 @app.get("/listar-fila")
-async def listar_fila():
-    return fila_espera
+def listar_fila(db: Session = Depends(get_db)):
+    # Retorna apenas quem está aguardando (Status 'espera')
+    return db.query(models.Atendimento)\
+             .filter(models.Atendimento.status == "espera")\
+             .order_by(models.Atendimento.id.asc()).all()
 
 @app.post("/chamar-proxima")
-async def chamar_proxima():
-    global ultima_senha_chamada  # Referenciando a variável global
+def chamar_proxima(db: Session = Depends(get_db)):
+    # Busca o primeiro da fila (FIFO) que ainda está em espera
+    proximo = db.query(models.Atendimento)\
+                .filter(models.Atendimento.status == "espera")\
+                .order_by(models.Atendimento.id.asc()).first()
     
-    if not fila_espera:
-        raise HTTPException(status_code=404, detail="Nenhuma senha na fila")
-    
-    # Remove o primeiro da fila (FIFO)
-    proxima = fila_espera.pop(0)
-    
-    # ATUALIZAÇÃO: Salvamos quem foi chamado agora para a rota da TV consultar
-    ultima_senha_chamada = proxima
-    
-    print(f"Painel Atualizado: {ultima_senha_chamada['codigo']}")
-    return proxima
+    if not proximo:
+        raise HTTPException(status_code=404, detail="Não há ninguém na fila de espera.")
+
+    # Atualiza o status
+    proximo.status = "chamado"
+    db.commit()
+    db.refresh(proximo)
+    return proximo
 
 @app.get("/ultima-chamada")
-async def get_ultima_chamada():
-    """Rota que a TV ficará consultando via polling"""
-    return ultima_senha_chamada
+def ultima_chamada(db: Session = Depends(get_db)):
+    # Busca a última pessoa que teve o status alterado para 'chamado'
+    ultima = db.query(models.Atendimento)\
+               .filter(models.Atendimento.status == "chamado")\
+               .order_by(models.Atendimento.id.desc()).first()
+    
+    if not ultima:
+        return {"codigo": "---", "nome": "AGUARDANDO", "tipo": "NENHUM"}
+    
+    return ultima
 
 if __name__ == "__main__":
     import uvicorn
