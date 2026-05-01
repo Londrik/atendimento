@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
-from database import Base
+from atendente.database iclemport Base
 
 class Atendimento(Base):
     __tablename__ = "atendimentos"
