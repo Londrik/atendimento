@@ -1,16 +1,27 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import models
-from database import engine, get_db
 
-# Garante a criação das tabelas no banco de dados recém-criado
+# AJUSTE DE IMPORTS: Referenciando a pasta 'atendente'
+from atendente import models
+from atendente.database import engine, get_db
+
+# Garante a criação das tabelas no banco de dados
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sistema de Filas SENAI")
 
-# CORS para permitir acesso do Totem, Atendente e TV
+# Monta a pasta 'static' para arquivos CSS, JS e Imagens
+app.mount("/static", StaticFiles(directory="atendente/static"), name="static")
+
+# Configura a pasta de templates HTML
+templates = Jinja2Templates(directory="atendente/templates")
+
+# CORS para permitir acesso de diferentes origens
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,12 +42,23 @@ class SenhaSchema(BaseModel):
     nome: str
     tipo: str
 
+# --- ROTAS DE INTERFACE (HTML) ---
+
+@app.get("/totem", response_class=HTMLResponse)
+async def exibir_totem(request: Request):
+    return templates.TemplateResponse("totem.html", {"request": request})
+
+@app.get("/painel", response_class=HTMLResponse)
+async def exibir_painel(request: Request):
+    return templates.TemplateResponse("painel.html", {"request": request})
+
+# --- ROTAS DA API (LÓGICA) ---
+
 @app.post("/gerar-senha")
 def gerar_senha(request: SenhaSchema, db: Session = Depends(get_db)):
     tipo_formatado = request.tipo.upper()
     prefixo = PREFIXOS.get(tipo_formatado, "S")
 
-    # Conta quantas senhas deste tipo já existem para gerar o sequencial
     contagem = db.query(models.Atendimento).filter(models.Atendimento.tipo == tipo_formatado).count()
     sequencial = str(contagem + 1).zfill(3)
     novo_codigo = f"{prefixo}-{sequencial}"
@@ -55,14 +77,12 @@ def gerar_senha(request: SenhaSchema, db: Session = Depends(get_db)):
 
 @app.get("/listar-fila")
 def listar_fila(db: Session = Depends(get_db)):
-    # Retorna apenas quem está aguardando (Status 'espera')
     return db.query(models.Atendimento)\
              .filter(models.Atendimento.status == "espera")\
              .order_by(models.Atendimento.id.asc()).all()
 
 @app.post("/chamar-proxima")
 def chamar_proxima(db: Session = Depends(get_db)):
-    # Busca o primeiro da fila (FIFO) que ainda está em espera
     proximo = db.query(models.Atendimento)\
                 .filter(models.Atendimento.status == "espera")\
                 .order_by(models.Atendimento.id.asc()).first()
@@ -70,7 +90,6 @@ def chamar_proxima(db: Session = Depends(get_db)):
     if not proximo:
         raise HTTPException(status_code=404, detail="Não há ninguém na fila de espera.")
 
-    # Atualiza o status
     proximo.status = "chamado"
     db.commit()
     db.refresh(proximo)
@@ -78,7 +97,6 @@ def chamar_proxima(db: Session = Depends(get_db)):
 
 @app.get("/ultima-chamada")
 def ultima_chamada(db: Session = Depends(get_db)):
-    # Busca a última pessoa que teve o status alterado para 'chamado'
     ultima = db.query(models.Atendimento)\
                .filter(models.Atendimento.status == "chamado")\
                .order_by(models.Atendimento.id.desc()).first()
