@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Chamadas - SENAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --senai-blue: #005ca9; }
+        .bg-senai { background-color: var(--senai-blue); }
+        .text-senai { color: var(--senai-blue); }
+        
+        /* Animação para quando a senha mudar */
+        @keyframes pulse-new {
+            0% { transform: scale(1); background-color: var(--senai-blue); }
+            50% { transform: scale(1.05); background-color: #0074d9; }
+            100% { transform: scale(1); background-color: var(--senai-blue); }
+        }
+        .animate-new-ticket { animation: pulse-new 1s ease-in-out 3; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden font-sans select-none">
+
+    <!-- Overlay de Ativação (Necessário para habilitar Som/Voz no Navegador) -->
+    <div id="overlay" class="fixed inset-0 z-50 bg-senai flex flex-col items-center justify-center text-white p-10 text-center">
+        <h1 class="text-5xl font-black italic mb-8 uppercase italic">SENAI - Painel de TV</h1>
+        <button onclick="iniciarPainel()" class="bg-white text-senai px-12 py-6 rounded-full text-3xl font-black shadow-2xl hover:scale-105 transition-transform">
+            ATIVAR SISTEMA DE VOZ
+        </button>
+        <p class="mt-6 opacity-80 text-xl font-medium italic italic italic italic">Clique no botão para iniciar o monitoramento.</p>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white p-6 shadow-md flex justify-between items-center px-16">
+        <div>
+            <h1 class="text-senai text-7xl font-black italic tracking-tighter">SENAI</h1>
+            <p class="text-gray-500 font-bold tracking-[0.3em] uppercase">Unidade de Atendimento</p>
+        </div>
+        <div class="text-right">
+            <p id="clock" class="text-6xl font-mono font-bold text-gray-700">00:00:00</p>
+            <p id="date" class="text-xl text-gray-400 font-bold uppercase"></p>
+        </div>
+    </header>
+
+    <main class="flex-grow flex p-8 gap-8 overflow-hidden">
+        
+        <!-- Área Principal (Senha Atual) -->
+        <div id="main-card" class="flex-grow bg-senai rounded-[40px] shadow-2xl flex flex-col items-center justify-center text-white relative border-8 border-white/20">
+            <span class="text-4xl font-bold uppercase tracking-[0.5em] mb-4 opacity-80">Senha Atual</span>
+            <h2 id="current-code" class="text-[22rem] font-black leading-none tracking-tighter mb-8">---</h2>
+            
+            <div class="bg-white/10 w-full py-8 flex flex-col items-center backdrop-blur-md">
+                <span id="current-name" class="text-8xl font-bold uppercase tracking-tight italic">Aguardando...</span>
+            </div>
+            
+            <div class="absolute bottom-10 flex items-center gap-4">
+                <i data-lucide="megaphone" class="w-12 h-12"></i>
+                <span class="text-3xl font-medium italic">Favor dirigir-se ao atendimento</span>
+            </div>
+        </div>
+
+        <!-- Lateral (Histórico) -->
+        <div class="w-1/4 flex flex-col gap-6">
+            <h3 class="text-gray-500 text-2xl font-black uppercase flex items-center gap-3">
+                <i data-lucide="history"></i> Últimas Chamadas
+            </h3>
+            <div id="history-container" class="flex flex-col gap-6">
+                <!-- Senhas anteriores entrarão aqui -->
+                <div class="bg-white p-8 rounded-3xl shadow-lg border-l-8 border-gray-300 opacity-50 italic">Nenhum histórico</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Som de Chamada -->
+    <audio id="ding-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+    <script>
+        lucide.createIcons();
+        
+        let ultimaSenhaConhecida = "---";
+        let historico = [];
+
+        // --- RELÓGIO ---
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR');
+            document.getElementById('date').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- LÓGICA DO PAINEL ---
+
+        async function fetchUltimaChamada() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/ultima-chamada');
+                const data = await res.json();
+
+                if (data.codigo !== ultimaSenhaConhecida && data.codigo !== "---") {
+                    
+                    // Adiciona a atual ao histórico antes de atualizar
+                    if (ultimaSenhaConhecida !== "---") {
+                        atualizarHistorico({
+                            codigo: document.getElementById('current-code').innerText,
+                            nome: document.getElementById('current-name').innerText
+                        });
+                    }
+
+                    ultimaSenhaConhecida = data.codigo;
+                    atualizarDisplay(data);
+                    executarAlerta(data);
+                }
+            } catch (err) {
+                console.error("Falha ao consultar API da TV", err);
+            }
+        }
+
+        function atualizarDisplay(data) {
+            const mainCard = document.getElementById('main-card');
+            const codeEl = document.getElementById('current-code');
+            const nameEl = document.getElementById('current-name');
+
+            codeEl.innerText = data.codigo;
+            nameEl.innerText = data.nome;
+
+            // Animação de destaque
+            mainCard.classList.remove('animate-new-ticket');
+            void mainCard.offsetWidth; // Reset animation
+            mainCard.classList.add('animate-new-ticket');
+        }
+
+        function atualizarHistorico(item) {
+            historico.unshift(item);
+            if (historico.length > 3) historico.pop();
+
+            const container = document.getElementById('history-container');
+            container.innerHTML = historico.map(h => `
+                <div class="bg-white p-6 rounded-3xl shadow-md border-l-8 border-senai/40 animate-in fade-in slide-in-from-right duration-500">
+                    <p class="text-senai text-4xl font-black">${h.codigo}</p>
+                    <p class="text-gray-600 text-xl font-bold uppercase truncate">${h.nome}</p>
+                </div>
+            `).join('');
+        }
+
+        function executarAlerta(data) {
+            // 1. Tocar Ding
+            const audio = document.getElementById('ding-sound');
+            audio.play().catch(e => console.log("Áudio bloqueado"));
+
+            // 2. Sintetizar Voz
+            const mensagem = new SpeechSynthesisUtterance();
+            mensagem.text = `Senha ${data.codigo}, ${data.nome}. Favor dirigir-se ao atendimento.`;
+            mensagem.lang = 'pt-BR';
+            mensagem.rate = 0.9; // Um pouco mais lento para clareza
+            mensagem.pitch = 1;
+            window.speechSynthesis.speak(mensagem);
+        }
+
+        function iniciarPainel() {
+            document.getElementById('overlay').classList.add('hidden');
+            // Começa a monitorar
+            setInterval(fetchUltimaChamada, 2000);
+            fetchUltimaChamada();
+        }
+    </script>
+</body>
+</html>
