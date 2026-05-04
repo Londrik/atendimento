@@ -1,0 +1,48 @@
+:root { 
+    --senai-blue: #005ca9; 
+}
+
+.bg-senai { background-color: var(--senai-blue); }
+.text-senai { color: var(--senai-blue); }
+
+/* Aplica Flexbox no corpo para centralizar o conteúdo total se necessário */
+body {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* O segredo para o telão: Flexbox no container da senha */
+.col-span-8 {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Empurra o título pro topo e guichê pro rodapé */
+    align-items: center;
+    padding: 3rem 0; /* Espaçamento interno fixo */
+}
+
+/* AJUSTE DAS LETRAS E COMPATIBILIDADE */
+#current-ticket {
+    line-height: 0.9; /* Menor para fontes gigantes no telão */
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1; /* Faz a senha ocupar o espaço central disponível */
+}
+
+#current-name {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    word-wrap: break-word;
+    max-width: 95%;
+    line-height: 1.1;
+    margin-bottom: 2rem; /* Garante distância do guichê abaixo */
+}
+
+.animate-pulse-slow { 
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; 
+}

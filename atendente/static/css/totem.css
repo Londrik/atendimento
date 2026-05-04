@@ -1,0 +1,78 @@
+:root { 
+    --senai-blue: #005DA5; 
+}
+
+.bg-senai { background-color: var(--senai-blue); }
+
+/* Configuração do Corpo para ocupar a tela toda sem rolar */
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow: hidden;
+    background-color: #f3f4f6; /* bg-gray-100 */
+}
+
+/* Container Principal do Totem */
+main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centraliza o conteúdo verticalmente */
+    align-items: center;    /* Centraliza o conteúdo horizontalmente */
+    padding: 2rem;
+}
+
+/* Ajuste para o formulário de nome */
+#form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* Espaço uniforme entre os elementos do form */
+    width: 100%;
+    max-width: 600px; /* Limita a largura para não esticar demais em telões */
+    transition: all 0.3s ease-in-out;
+}
+
+/* Grid de Serviços usando Flexbox (ou Grid se preferir) */
+.grid-servicos {
+    display: flex;
+    flex-wrap: wrap; /* Permite que os botões pulem de linha se não couberem */
+    justify-content: center;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.btn-voltar {
+    background-color: #4b5563;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-voltar:hover {
+    background-color: #374151;
+    transform: translateY(-2px); /* Pequeno efeito de elevação */
+}
+
+/* Garante que o input seja amigável */
+input {
+    width: 100%;
+    padding: 1.25rem;
+    font-size: 1.5rem;
+    border-radius: 1rem;
+    border: 2px solid #e5e7eb;
+    outline: none;
+}
+
+input:focus {
+    border-color: var(--senai-blue);
+    box-shadow: 0 0 0 4px rgba(0, 93, 165, 0.1);
+}
+
+input::placeholder {
+    color: #9ca3af;
+    text-transform: none;
+}

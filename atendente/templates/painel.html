@@ -4,18 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Chamadas - SENAI</title>
+    <!-- Bibliotecas Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root { --senai-blue: #005ca9; }
-        .bg-senai { background-color: var(--senai-blue); }
-        .text-senai { color: var(--senai-blue); }
-        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    </style>
+    
+    <!-- Nosso CSS Customizado -->
+    <link rel="stylesheet" href="/static/css/painel.css">
 </head>
-<body class="bg-gray-200 min-h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500">
+<body class="bg-gray-200 min-h-screen flex flex-col font-sans transition-colors duration-500">
 
-    <!-- Áudio de Chamada (Escondido) -->
     <audio id="audioChamada" src="/static/audio/chamada.wav" preload="auto"></audio>
 
     <header class="bg-white p-8 shadow-xl flex justify-between items-center border-b-8 border-senai">
@@ -30,125 +27,39 @@
     </header>
 
     <main class="flex-grow p-10 grid grid-cols-12 gap-10">
-        <!-- SENHA ATUAL E DESTINO -->
-        <div class="col-span-8 bg-senai rounded-[3rem] shadow-2xl flex flex-col items-center justify-center text-white relative overflow-hidden border-8 border-white/20">
-            <h2 class="absolute top-10 text-4xl font-black tracking-[1em] opacity-50">SENHA ATUAL</h2>
+        <!-- Lado Esquerdo: Senha Principal -->
+        <div class="col-span-8 bg-senai rounded-[3rem] shadow-2xl flex flex-col items-center justify-between py-12 text-white relative overflow-hidden border-8 border-white/20">
             
-            <div id="current-ticket" class="text-[12rem] font-black leading-none tracking-tighter mb-2 break-all">---</div>
-            <div id="current-name" class="text-6xl font-bold uppercase tracking-widest bg-white/10 px-12 py-4 rounded-full italic mb-8">AGUARDANDO</div>
+            <!-- Título com margem controlada em vez de absolute -->
+            <h2 class="text-4xl font-black tracking-[1em] opacity-50 uppercase">Senha Atual</h2>
             
+            <!-- Container central para evitar sobreposição -->
+            <div class="flex flex-col items-center justify-center flex-grow">
+                <div id="current-ticket" class="text-[14rem] font-black leading-none mb-4">---</div>
+                <div id="current-name" class="text-5xl font-bold uppercase tracking-widest bg-white/10 px-12 py-4 rounded-full italic">AGUARDANDO</div>
+            </div>
+            
+            <!-- Rodapé da senha -->
             <div class="flex flex-col items-center">
-                <span class="text-2xl font-bold uppercase tracking-[0.5em] text-blue-200">Dirija-se ao:</span>
-                <div id="current-guiche" class="text-8xl font-black bg-white text-senai px-16 py-4 rounded-3xl shadow-inner mt-2">---</div>
+                <span class="text-2xl font-bold uppercase tracking-[0.5em] text-blue-200 mb-2">Dirija-se ao:</span>
+                <div id="current-guiche" class="text-8xl font-black bg-white text-senai px-16 py-4 rounded-3xl shadow-inner">---</div>
             </div>
         </div>
 
-        <!-- PRÓXIMOS NA FILA -->
+        <!-- Lado Direito: Histórico -->
         <div class="col-span-4 flex flex-col gap-6">
-            <div class="bg-white rounded-[2rem] p-8 shadow-lg flex-grow border-t-8 border-senai">
+            <div class="bg-white rounded-[2rem] p-8 shadow-lg flex-grow border-t-8 border-senai overflow-hidden">
                 <h3 class="text-3xl font-black text-gray-400 mb-8 uppercase tracking-tighter flex items-center gap-3">
-                    <i data-lucide="history" class="w-8 h-8"></i> Próximos na Fila
+                    <i data-lucide="history" class="w-8 h-8"></i> Últimas Chamadas
                 </h3>
                 <div id="history-list" class="space-y-6">
-                    <!-- Gerado via JS -->
+                    <!-- As senhas anteriores aparecerão aqui -->
                 </div>
             </div>
         </div>
     </main>
 
-<script>
-    lucide.createIcons();
-    let ultimaSenha = ""; 
-
-    function updateClock() {
-        const agora = new Date();
-        document.getElementById('clock').textContent = agora.toLocaleTimeString('pt-BR');
-        const opcoes = { weekday: 'long', day: 'numeric', month: 'long' };
-        document.getElementById('date').textContent = agora.toLocaleDateString('pt-BR', opcoes);
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // NOVA FUNÇÃO: Toca o arquivo .wav real
-    function tocarAlertaSonoro() {
-        const audio = document.getElementById('audioChamada');
-        audio.currentTime = 0; // Reinicia o som se já estiver tocando
-        audio.play().catch(e => console.log("Aguardando interação para áudio:", e));
-    }
-
-    function falarSenha(codigo, nome, guiche) {
-        window.speechSynthesis.cancel(); // Para qualquer fala anterior
-        
-        // Formatação da fala para ficar natural
-        // Ex: "Senha G zero um. Henry. Dirija-se ao Guichê 01"
-        const codigoSoletrado = codigo.split('').join(' ');
-        const texto = `Senha, ${codigoSoletrado}. ${nome}. Favor dirigir-se ao ${guiche}`;
-        
-        const mensagem = new SpeechSynthesisUtterance(texto);
-        mensagem.lang = 'pt-BR';
-        mensagem.rate = 0.9; // Velocidade levemente reduzida para clareza
-        mensagem.pitch = 1.0;
-        
-        window.speechSynthesis.speak(mensagem);
-    }
-
-    async function fetchFila() {
-        try {
-            const response = await fetch('/listar-fila');
-            const fila = await response.json();
-
-            const ticketElement = document.getElementById('current-ticket');
-            const nameElement = document.getElementById('current-name');
-            const guicheElement = document.getElementById('current-guiche');
-            const historyList = document.getElementById('history-list');
-
-            if (fila && fila.length > 0) {
-                const atual = fila[0];
-                const guicheAtendimento = atual.guiche || "Guichê 01";
-
-                if (atual.codigo !== ultimaSenha) {
-                    ultimaSenha = atual.codigo;
-                    
-                    // 1. Toca o sino (WAV)
-                    tocarAlertaSonoro();
-                    
-                    // 2. Aguarda um pouco o sino acabar e fala (TTS)
-                    setTimeout(() => {
-                        falarSenha(atual.codigo, atual.nome, guicheAtendimento);
-                    }, 1200);
-                    
-                    // Alerta visual (Pisca a tela)
-                    document.body.classList.add('bg-yellow-400');
-                    setTimeout(() => document.body.classList.remove('bg-yellow-400'), 1000);
-                }
-
-                ticketElement.textContent = atual.codigo;
-                nameElement.textContent = atual.nome;
-                guicheElement.textContent = guicheAtendimento;
-
-                historyList.innerHTML = fila.slice(1, 6).map(item => `
-                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border-l-8 border-senai">
-                        <div class="flex flex-col">
-                            <span class="text-4xl font-black text-senai">${item.codigo}</span>
-                            <span class="text-xs font-bold text-gray-400 uppercase tracking-tighter">${item.guiche || 'Aguardando'}</span>
-                        </div>
-                        <span class="text-xl font-bold text-gray-500 uppercase">${item.nome.split(' ')[0]}</span>
-                    </div>
-                `).join('');
-            } else {
-                ticketElement.textContent = "---";
-                nameElement.textContent = "SEM SENHAS";
-                guicheElement.textContent = "---";
-                historyList.innerHTML = '<p class="text-center text-gray-300 font-bold py-10 uppercase">Fila vazia</p>';
-            }
-        } catch (error) {
-            console.error("Erro ao buscar fila:", error);
-        }
-    }
-
-    // Consulta o servidor a cada 3 segundos
-    setInterval(fetchFila, 3000);
-    fetchFila();
-</script>
+    <!-- Nosso JavaScript Customizado -->
+    <script src="/static/js/painel.js"></script>
 </body>
 </html>

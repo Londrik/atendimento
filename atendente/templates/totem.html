@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SENAI - Totem de Atendimento</title>
-    <!-- Tailwind CSS para os botões e grid funcionarem -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/totem.css">
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen font-sans">
 
-    <!-- Cabeçalho Oficial SENAI -->
     <nav class="bg-[#005DA5] p-6 text-white shadow-lg mb-10">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-tighter italic">SENAI <span class="font-light not-italic text-lg ml-2">Unidade Gama</span></h1>
@@ -18,53 +16,39 @@
         </div>
     </nav>
 
-    <div class="max-w-6xl mx-auto text-center px-4">
-        <h2 class="text-4xl font-black text-gray-800 mb-4 uppercase">Emissão de Senha</h2>
-        <p class="text-gray-600 mb-10">Selecione o tipo de atendimento desejado abaixo:</p>
+    <div class="max-w-4xl mx-auto text-center px-4">
+        <h2 id="titulo-totem" class="text-5xl font-black text-gray-800 mb-4 uppercase transition-all">Emissão de Senha</h2>
+        <p class="text-gray-600 mb-10 text-xl">Siga as instruções na tela:</p>
 
-        <!-- Grid de Botões -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-6">
-            <button onclick="gerarSenha('Preferencial')" class="bg-red-600 text-white p-12 rounded-3xl text-3xl font-black shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase">
+        <!-- TELA 1: Seleção de Serviços -->
+        <div id="grid-servicos" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <button onclick="selecionarTipo('Preferencial')" class="bg-red-600 text-white p-10 rounded-3xl text-2xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase">
                 Preferencial
             </button>
-            
-            <button onclick="gerarSenha('Matrícula')" class="bg-green-600 text-white p-12 rounded-3xl text-3xl font-black shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase">
+            <button onclick="selecionarTipo('Matrícula')" class="bg-green-600 text-white p-10 rounded-3xl text-2xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase">
                 Matrículas
             </button>
-
-            <button onclick="gerarSenha('Geral')" class="bg-blue-600 text-white p-12 rounded-3xl text-3xl font-black shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase">
+            <button onclick="selecionarTipo('Geral')" class="bg-blue-600 text-white p-10 rounded-3xl text-2xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase">
                 Geral
             </button>
         </div>
+
+        <!-- TELA 2: Digitar Nome (Inicia escondida) -->
+        <div id="form-nome" class="hidden bg-white p-12 rounded-[3rem] shadow-2xl border-4 border-senai">
+            <input type="text" id="input-nome" placeholder="DIGITE SEU NOME AQUI" 
+                   class="w-full text-3xl p-6 border-b-8 border-gray-200 focus:border-senai outline-none text-center font-bold mb-10 uppercase">
+            
+            <div class="flex flex-col md:flex-row gap-4">
+                <button onclick="voltar()" class="btn-voltar flex-1 text-white p-8 rounded-2xl text-2xl font-black uppercase">
+                    Voltar
+                </button>
+                <button onclick="gerarSenha()" class="bg-green-500 flex-[2] text-white p-8 rounded-2xl text-2xl font-black shadow-lg hover:bg-green-600 uppercase">
+                    Confirmar e Gerar
+                </button>
+            </div>
+        </div>
     </div>
 
-    <script>
-    async function gerarSenha(tipo) {
-        const nome = prompt("Digite seu nome para a senha:");
-        if (!nome) return; 
-
-        try {
-            const response = await fetch('/gerar-senha', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    nome: nome, 
-                    tipo: tipo 
-                })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                // Alerta estilizado (pode ser trocado por um modal depois)
-                alert(`✅ SENHA GERADA COM SUCESSO!\n\nNOME: ${nome}\nSENHA: ${data.codigo}\nTIPO: ${tipo}\n\nAguarde ser chamado no painel.`);
-            } else {
-                alert("❌ Erro ao gerar senha. Verifique se o banco de dados está ligado.");
-            }
-        } catch (error) {
-            console.error("Erro na requisição:", error);
-            alert("⚠️ Erro de conexão com o servidor.");
-        }
-    }
-    </script>
+    <script src="/static/js/totem.js"></script>
 </body>
 </html>
