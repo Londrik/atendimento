@@ -23,3 +23,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 3. Cria a classe Base que o models.py está procurando (Faltava isso)
 Base = declarative_base()
+
+# No final do seu atendente/database.py
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
