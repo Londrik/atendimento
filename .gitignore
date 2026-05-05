@@ -1,5 +1,14 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Configurações de Ambiente (Segurança)
 .env
-*.db
+
+# Banco de dados local/Logs
+*.log
+*.sql

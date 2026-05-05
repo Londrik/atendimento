@@ -1,45 +1,19 @@
-let tipoSelecionado = "";
-
-// Função para mostrar a tela de digitar o nome
-function selecionarTipo(tipo) {
-    tipoSelecionado = tipo;
-    document.getElementById('grid-servicos').classList.add('hidden');
-    document.getElementById('form-nome').classList.remove('hidden');
-    document.getElementById('input-nome').focus();
-    document.getElementById('titulo-totem').textContent = "Identifique-se";
-}
-
-// Função para VOLTAR para a tela de serviços
-function voltar() {
-    tipoSelecionado = "";
-    document.getElementById('grid-servicos').classList.remove('hidden');
-    document.getElementById('form-nome').classList.add('hidden');
-    document.getElementById('input-nome').value = "";
-    document.getElementById('titulo-totem').textContent = "Emissão de Senha";
-}
-
-async function gerarSenha() {
-    const nome = document.getElementById('input-nome').value.trim();
-    
-    if (!nome) {
-        alert("Por favor, digite seu nome.");
-        return;
-    }
+async function gerarSenha(tipo) {
+    const nomePadrao = "Aluno SENAI"; 
 
     try {
         const response = await fetch('/gerar-senha', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                nome: nome, 
-                tipo: tipoSelecionado 
+                nome: nomePadrao, 
+                tipo: tipo 
             })
         });
         
         if (response.ok) {
             const data = await response.json();
-            alert(`✅ SENHA GERADA!\n\nNOME: ${nome}\nSENHA: ${data.codigo}\n\nAguarde no painel.`);
-            voltar(); // Retorna automaticamente para o início após gerar
+            exibirSucesso(data.codigo, tipo);
         } else {
             alert("❌ Erro ao gerar senha.");
         }
@@ -47,4 +21,23 @@ async function gerarSenha() {
         console.error("Erro:", error);
         alert("⚠️ Erro de conexão com o servidor.");
     }
+}
+
+function exibirSucesso(codigo, tipo) {
+    // Esconde a grade de botões
+    document.getElementById('grid-servicos').classList.add('hidden');
+    
+    // Preenche os dados da senha
+    document.getElementById('display-senha').textContent = codigo;
+    document.getElementById('info-servico').textContent = `SERVIÇO: ${tipo}`;
+    
+    // Mostra o bloco de sucesso
+    const feedback = document.getElementById('feedback-sucesso');
+    feedback.classList.remove('hidden');
+
+    // Após 5 segundos, volta para a tela inicial automaticamente
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+        document.getElementById('grid-servicos').classList.remove('hidden');
+    }, 5000);
 }
