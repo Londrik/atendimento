@@ -2,42 +2,33 @@
     --senai-blue: #005ca9; 
 }
 
-.bg-senai { background-color: var(--senai-blue); }
-.text-senai { color: var(--senai-blue); }
-
 body {
-    /* Permite scroll apenas em telas pequenas */
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    margin: 0;
 }
 
-/* No computador (telas maiores que 768px), volta a travar a tela se preferir */
+/* Telão (Desktop): Trava o scroll */
 @media (min-width: 768px) {
     body {
         overflow: hidden;
     }
 }
 
-/* O segredo para o telão: Ajuste de preenchimento */
-.col-span-1, .col-span-8 {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
+/* Mobile: Permite rolar para ver o histórico */
+@media (max-width: 767px) {
+    body {
+        overflow-y: auto;
+    }
 }
 
 #current-ticket {
     line-height: 0.9;
     letter-spacing: -0.02em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 #current-name {
-    text-align: center;
     word-wrap: break-word;
     max-width: 90%;
 }
