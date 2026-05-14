@@ -7,6 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/static/css/atendente.css">
+    <style>
+        /* Definindo a cor padrão do SENAI caso não esteja no CSS externo */
+        .bg-senai { background-color: #005ca9; }
+        .border-senai { border-color: #005ca9; }
+        .text-senai { color: #005ca9; }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
 
@@ -47,7 +53,7 @@
                     <span class="text-xl font-black">CHAMAR PRÓXIMO</span>
                 </button>
 
-                <button onclick="chamarNovamente()" class="group bg-gray-200 hover:bg-gray-300 text-gray-700 p-8 rounded-2xl transition-all flex flex-col items-center justify-center gap-2">
+                <button onclick="chamarNovamente(event)" class="group bg-gray-200 hover:bg-gray-300 text-gray-700 p-8 rounded-2xl transition-all flex flex-col items-center justify-center gap-2">
                     <i data-lucide="refresh-cw" class="w-10 h-10 group-hover:rotate-180 transition-transform duration-500"></i>
                     <span class="text-xl font-black">REPETIR CHAMADA</span>
                 </button>

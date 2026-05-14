@@ -7,16 +7,13 @@ from sqlalchemy.orm import Session
 from typing import List
 import uvicorn
 
-# Importações do seu módulo interno
 from atendente import models, schemas, crud
 from atendente.database import SessionLocal, engine, get_db
 
-# Inicializa as tabelas no banco de dados
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sistema de Atendimento SENAI - Unidade Gama")
 
-# --- LÓGICA DO WEBSOCKET (Connection Manager) ---
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -39,11 +36,9 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# --- CONFIGURAÇÕES DE ARQUIVOS ESTÁTICOS E TEMPLATES ---
 app.mount("/static", StaticFiles(directory="atendente/static"), name="static")
 templates = Jinja2Templates(directory="atendente/templates")
 
-# Middleware CORS
 app.add_middleware(
     CORSMiddleware, 
     allow_origins=["*"], 
@@ -51,7 +46,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# --- ROTA DO WEBSOCKET ---
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -60,9 +54,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-
-# --- ROTAS DE PÁGINAS (HTML) ---
-# CORREÇÃO: Usando argumentos nomeados (request=request, name="...") para evitar erros de versão
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
@@ -84,8 +75,6 @@ async def exibir_atendente(request: Request):
 async def exibir_dashboard(request: Request):
     return templates.TemplateResponse(request=request, name="dashboard.html")
 
-# --- ROTAS DA API ---
-
 @app.post("/gerar-senha", response_model=schemas.Atendimento)
 async def gerar_senha(senha: schemas.AtendimentoCreate, db: Session = Depends(get_db)):
     nova_senha = crud.criar_atendimento(db=db, nome=senha.nome, tipo=senha.tipo)
@@ -101,11 +90,13 @@ async def chamar_proxima(dados: schemas.ChamadaRequest, db: Session = Depends(ge
     proximo = crud.chamar_proximo(db, guiche=dados.guiche)
     if not proximo:
         raise HTTPException(status_code=404, detail="Não há ninguém aguardando na fila.")
-    
     await manager.broadcast("atualizar_painel")
     return proximo
 
-# --- NOVAS ROTAS PARA O DASHBOARD ---
+@app.post("/repetir-chamada")
+async def repetir_chamada():
+    await manager.broadcast("atualizar_painel")
+    return {"status": "Chamada repetida com sucesso"}
 
 @app.get("/api/v1/metrics")
 def get_metrics(db: Session = Depends(get_db)):

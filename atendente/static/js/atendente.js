@@ -18,17 +18,28 @@ async function chamarProximo() {
             atualizarFila();
         } else {
             const erroData = await response.json();
-            alert("Atenção: " + (erroData.detail || "Fila vazia ou erro no servidor"));
+            alert("Erro: " + (erroData.detail || "Falha na requisição"));
         }
     } catch (error) {
         console.error("Erro na requisição:", error);
-        alert("Erro ao conectar com o servidor.");
     }
 }
 
-async function chamarNovamente() {
-    if (!atendimentoAtual) return alert("Nenhuma senha foi chamada ainda.");
-    alert(`Repetindo chamada: ${atendimentoAtual.codigo} no ${atendimentoAtual.guiche}`);
+async function chamarNovamente(event) {
+    if (!atendimentoAtual) return alert("Nenhuma senha em atendimento.");
+
+    try {
+        const response = await fetch("/repetir-chamada", { method: "POST" });
+        
+        if (response.ok) {
+            const btn = event.currentTarget; 
+            const originalColor = btn.style.backgroundColor;
+            btn.style.backgroundColor = "#d1fae5";
+            setTimeout(() => btn.style.backgroundColor = originalColor, 500);
+        }
+    } catch (error) {
+        console.error("Erro ao repetir chamada:", error);
+    }
 }
 
 async function atualizarFila() {
@@ -42,12 +53,12 @@ async function atualizarFila() {
         contador.textContent = `${fila.length} na fila`;
 
         if (fila.length === 0) {
-            lista.innerHTML = `<p class="text-center text-gray-400 py-4">Ninguém aguardando.</p>`;
+            lista.innerHTML = `<p class="text-center text-gray-400 py-4">Fila vazia</p>`;
             return;
         }
 
         lista.innerHTML = fila.map(item => `
-            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl border-l-4 ${item.tipo === "Prioritário" || item.tipo === "Preferencial" ? "border-red-500" : "border-senai"}">
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl border-l-4 ${item.tipo === "Prioritário" || item.tipo === "Preferencial" ? "border-red-500" : "border-blue-600"}">
                 <div>
                     <span class="font-black text-lg">${item.codigo}</span>
                     <span class="ml-3 text-gray-600 font-medium">${item.nome}</span>
