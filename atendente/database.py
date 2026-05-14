@@ -1,7 +1,7 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base # <--- Faltava este import
-from sqlalchemy.orm import sessionmaker # <--- Faltava este import
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 # Recupera os dados do ambiente
 DB_USER = os.getenv("DB_USER")
@@ -15,17 +15,20 @@ SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{D
 
 print(f"DEBUG: Tentando conectar em {DB_HOST}:{DB_PORT} com o banco {DB_NAME}")
 
-# 1. Cria o motor de conexão
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# 1. Cria o motor de conexão com proteção contra timeouts (Pool de conexões resiliente)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    pool_recycle=3600,  # Fecha conexões com mais de 1 hora para evitar timeout do MySQL
+    pool_pre_ping=True  # Testa a conexão antes de cada uso (Evita o erro "Server has gone away")
+)
 
-# 2. Cria a fábrica de sessões (Faltava isso)
+# 2. Cria a fábrica de sessões
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 3. Cria a classe Base que o models.py está procurando (Faltava isso)
+# 3. Cria a classe Base que o models.py está procurando
 Base = declarative_base()
 
-# No final do seu atendente/database.py
-
+# Função para gerenciar as sessões do banco de dados nas rotas
 def get_db():
     db = SessionLocal()
     try:

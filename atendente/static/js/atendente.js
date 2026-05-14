@@ -1,6 +1,23 @@
 lucide.createIcons();
 let atendimentoAtual = null;
 
+// --- LÓGICA DE CONEXÃO WEBSOCKET ---
+const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+const socket = new WebSocket(`${protocol}${window.location.host}/ws`);
+
+socket.onmessage = function(event) {
+    if (event.data === "atualizar_lista") {
+        console.log("📢 Nova senha detectada no totem! Atualizando fila...");
+        atualizarFila();
+    }
+};
+
+socket.onclose = function() {
+    console.error("❌ Conexão com o servidor perdida. Tentando reconectar...");
+    setTimeout(() => window.location.reload(), 5000);
+};
+
+// --- FUNÇÕES DE ATENDIMENTO ---
 async function chamarProximo() {
     const guicheSelecionado = document.getElementById("select-guiche").value;
     
@@ -73,5 +90,6 @@ async function atualizarFila() {
     }
 }
 
-setInterval(atualizarFila, 5000);
+// Mantém um backup de atualização a cada 30s caso o socket falhe
+setInterval(atualizarFila, 30000);
 atualizarFila();
